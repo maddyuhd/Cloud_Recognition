@@ -10,7 +10,6 @@ pos=[]
 neg=[]
 loop=0	
 
-
 def resize(h1,w1,res,scn_img):
 
 	if h1>w1:
@@ -59,11 +58,10 @@ def match(scn_img,imagePath1,filename,des1):
 
 		# kp2 = fast.detect(src_img,None)
 		kp2, descs = detector.detectAndCompute(src_img, None)
-		# print("input:",len(kp2))
-	#==============================================>DRAW KPT
+		# kp2 = detector.detect(src_img, None)
 
-		img5 = cv2.drawKeypoints(src_img, kp2,None, color=(0,255,255))
-		cv2.imwrite('k.jpg', img5)
+		# print("input:",len(kp2))
+	
 	#==============================================>FREAK_DES
 
 		kp2,des2= freakExtractor.compute(src_img,kp2)
@@ -81,35 +79,45 @@ def match(scn_img,imagePath1,filename,des1):
 
 			good = []
 			for m,n in matches:
-				if m.distance < 0.625*n.distance:
+				if m.distance < 0.65*n.distance:
 					good.append(m)
 			# print ("good matches",len(good))
 
 			MIN_MATCH_COUNT=10
 
 			if len(good)>MIN_MATCH_COUNT:
-				filename=str(filename)+" = "+str(len(good))+" matches"
-				pos.append("      "+str(filename))
+				
+				src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+				dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+				M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
+				try:
 
-				# src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
-				# dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
-				# M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
-				# matchesMask = mask.ravel().tolist()
+					matchesMask = mask.ravel().tolist()
 
-				# draw_params = dict(matchColor = (0,255,0), # draw matches in green color
-			 #                        singlePointColor = None,
-			 #                        matchesMask = matchesMask, # draw only inliers
-			 #                        flags = 2)
+					draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+			                        singlePointColor = None,
+			                        matchesMask = matchesMask, # draw only inliers
+			                        flags = 2)
 
-				# img3=cv2.drawMatches(scn_img,kp1,src_img,kp2,good,None,**draw_params)
-				# name=str(time.time())+".jpg"
-				# cv2.imwrite(filename, img3)
+					filename=str(filename)+" = "+str(len(good))+" matches"
+					pos.append("      "+str(filename))
+
+					img3=cv2.drawMatches(scn_img,kp1,src_img,kp2,good,None,**draw_params)
+					name=str(time.time())+".jpg"
+					cv2.imwrite(filename, img3)
 
 
-				# h,w= scn_img.shape
-				# pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-				# dst = cv2.perspectiveTransform(pts,M)
-				# src_img = cv2.polylines(src_img,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+					# h,w= scn_img.shape
+					# pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+					# dst = cv2.perspectiveTransform(pts,M)
+					# src_img = cv2.polylines(src_img,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+					#==============================================>DRAW KPT
+
+					img5 = cv2.drawKeypoints(src_img, kp2 ,None, color=(0,255,255))
+					cv2.imwrite('src.jpg', img5)
+				except:
+					print "error - "+str(filename)
+
 			else:
 				# print "Nope - %d/%d" % (len(good),MIN_MATCH_COUNT)
 				filename=str(filename)+" = "+str(len(good))+" matches"
@@ -138,11 +146,11 @@ try:
 	scn_img = cv2.imread(imagePath,0)
 
 except :
-	imagePath="pics/box2.jpg"
+	imagePath="pics/box.jpg"
 	# imagePath="/home/smacar/Desktop/dev/online/db/movingobjects/barrywhitemov/barrywhitemovVGA_00001.jpg"
 	scn_img= cv2.imread(imagePath,0)
 
-path = '/home/smacar/Desktop/dev/online/pics/src'
+path = '/home/smacar/Online_Recognition/pics/src'
 # path="/home/smacar/Desktop/dev/online/db/database"
 
 
@@ -153,15 +161,17 @@ masked_data = maskdata(scn_img,h1,w1)
 
 # fast = cv2.FastFeatureDetector_create(49)
 detector=cv2.xfeatures2d.SURF_create(400, 5, 5)
-
-kp1, desc = detector.detectAndCompute(scn_img, masked_data)
+# detector = cv2.BRISK_create(70)
 
 # kp1 = fast.detect(scn_img,masked_data)
+kp1, desc = detector.detectAndCompute(scn_img, masked_data)
+# kp1 = detector.detect(scn_img, masked_data)
+
 freakExtractor = cv2.xfeatures2d.FREAK_create()
 kp1,des1= freakExtractor.compute(scn_img,kp1)
 
 img4 = cv2.drawKeypoints(scn_img, kp1,None, color=(0,255,255))
-cv2.imwrite('k_input.jpg', img4)
+cv2.imwrite('input.jpg', img4)
 
 #==============================================>Multiple Samples
 for filename in os.listdir(path):
