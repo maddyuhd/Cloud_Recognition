@@ -10,6 +10,7 @@ pos=[]
 neg=[]
 loop=0	
 
+
 def resize(h1,w1,res,scn_img):
 
 	if h1>w1:
